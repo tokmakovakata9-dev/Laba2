@@ -1,6 +1,7 @@
 ﻿#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h> 
 
 #define MAXL 10
 
@@ -47,7 +48,7 @@ static void parse(const char* s)
                     weight[idx] = 0;
                 }
 
-                if (i == 0 && first) { 
+                if (i == 0 && first) {
                     leading[idx] = 1;
                     first = 0;
                 }
@@ -58,21 +59,28 @@ static void parse(const char* s)
             p += len;
         }
         else {
-            p++; 
+            p++;
         }
     }
 }
 
-static int solve(int idx, int used, long long sum)
+static int solve(int idx, int used, long long sum, long long max_remaining)
 {
     if (idx == nletters) return sum == 0;
+
+    if (llabs(sum) > max_remaining) {
+        return 0;
+    }
 
     for (int d = 0; d <= 9; ++d) {
         if (used & (1 << d)) continue;
         if (d == 0 && leading[idx]) continue;
 
         digit[idx] = d;
-        if (solve(idx + 1, used | (1 << d), sum + (long long)d * weight[idx])) {
+
+        long long next_max = max_remaining - 9LL * abs(weight[idx]);
+
+        if (solve(idx + 1, used | (1 << d), sum + (long long)d * weight[idx], next_max)) {
             return 1;
         }
     }
@@ -113,7 +121,12 @@ int main(void)
 
     parse(clean);
 
-    if (solve(0, 0, 0)) {
+    long long initial_max = 0;
+    for (int i = 0; i < nletters; ++i) {
+        initial_max += 9LL * abs(weight[i]);
+    }
+
+    if (solve(0, 0, 0, initial_max)) {
         print_answer(clean);
     }
     else {
