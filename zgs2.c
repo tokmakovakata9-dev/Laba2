@@ -1,0 +1,124 @@
+﻿#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MAXL 10
+
+static char letters[MAXL];
+static int  nletters;
+static int  digit[MAXL];
+static int  leading[MAXL];
+static int  weight[MAXL];
+
+static void parse(const char* s)
+{
+    nletters = 0;
+    int sign = 1;
+    int first = 1;
+
+    const char* p = s;
+    while (*p) {
+        if (*p == '+' || *p == '=') {
+            sign = (*p == '=') ? -1 : 1;
+            first = 1;
+            p++;
+            continue;
+        }
+
+        if (*p >= 'A' && *p <= 'Z') {
+            int len = 0;
+            const char* tmp = p;
+            while (*tmp >= 'A' && *tmp <= 'Z') {
+                len++;
+                tmp++;
+            }
+
+            int w = 1;
+            for (int i = len - 1; i >= 0; --i) {
+                char c = p[i];
+                int idx = -1;
+                for (int j = 0; j < nletters; ++j) {
+                    if (letters[j] == c) { idx = j; break; }
+                }
+                if (idx < 0) {
+                    idx = nletters++;
+                    letters[idx] = c;
+                    leading[idx] = 0;
+                    weight[idx] = 0;
+                }
+
+                if (i == 0 && first) { 
+                    leading[idx] = 1;
+                    first = 0;
+                }
+
+                weight[idx] += sign * w;
+                w *= 10;
+            }
+            p += len;
+        }
+        else {
+            p++; 
+        }
+    }
+}
+
+static int solve(int idx, int used, long long sum)
+{
+    if (idx == nletters) return sum == 0;
+
+    for (int d = 0; d <= 9; ++d) {
+        if (used & (1 << d)) continue;
+        if (d == 0 && leading[idx]) continue;
+
+        digit[idx] = d;
+        if (solve(idx + 1, used | (1 << d), sum + (long long)d * weight[idx])) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void print_answer(const char* s)
+{
+    for (const char* p = s; *p; ++p) {
+        char c = *p;
+        if (c >= 'A' && c <= 'Z') {
+            for (int i = 0; i < nletters; ++i) {
+                if (letters[i] == c) { putchar('0' + digit[i]); break; }
+            }
+        }
+        else {
+            putchar(c);
+        }
+    }
+    putchar('\n');
+}
+
+int main(void)
+{
+    char raw[256];
+    char clean[256];
+
+    if (!fgets(raw, sizeof(raw), stdin)) return 1;
+
+    int k = 0;
+    for (int i = 0; raw[i] != '\0' && raw[i] != '\n' && raw[i] != '\r'; ++i) {
+        char c = raw[i];
+        if ((c >= 'A' && c <= 'Z') || c == '+' || c == '=') {
+            clean[k++] = c;
+        }
+    }
+    clean[k] = '\0';
+
+    parse(clean);
+
+    if (solve(0, 0, 0)) {
+        print_answer(clean);
+    }
+    else {
+        printf("No solution\n");
+    }
+
+    return 0;
+}
