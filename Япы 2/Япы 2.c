@@ -1,7 +1,7 @@
 ﻿#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <math.h> 
+#include <math.h>
 
 #define MAXL 10
 
@@ -10,6 +10,9 @@ static int  nletters;
 static int  digit[MAXL];
 static int  leading[MAXL];
 static int  weight[MAXL];
+
+static int  order[MAXL];    
+static int  abs_weight[MAXL];
 
 static void parse(const char* s)
 {
@@ -72,15 +75,20 @@ static int solve(int idx, int used, long long sum, long long max_remaining)
         return 0;
     }
 
-    for (int d = 0; d <= 9; ++d) {
+    int real_idx = order[idx];
+
+    int start_d = 0;
+    if (leading[real_idx]) start_d = 1;
+
+    for (int d = start_d; d <= 9; ++d) {
         if (used & (1 << d)) continue;
-        if (d == 0 && leading[idx]) continue;
+        if (d == 0 && leading[real_idx]) continue;
 
-        digit[idx] = d;
+        digit[real_idx] = d; 
 
-        long long next_max = max_remaining - 9LL * abs(weight[idx]);
+        long long next_max = max_remaining - 9LL * abs_weight[real_idx];
 
-        if (solve(idx + 1, used | (1 << d), sum + (long long)d * weight[idx], next_max)) {
+        if (solve(idx + 1, used | (1 << d), sum + (long long)d * weight[real_idx], next_max)) {
             return 1;
         }
     }
@@ -103,6 +111,24 @@ static void print_answer(const char* s)
     putchar('\n');
 }
 
+static void prepare_optimization2(void)
+{
+    for (int i = 0; i < nletters; ++i) {
+        order[i] = i;
+        abs_weight[i] = abs(weight[i]);
+    }
+
+    for (int i = 0; i < nletters - 1; ++i) {
+        for (int j = 0; j < nletters - 1 - i; ++j) {
+            if (abs_weight[order[j]] < abs_weight[order[j + 1]]) {
+                int temp = order[j];
+                order[j] = order[j + 1];
+                order[j + 1] = temp;
+            }
+        }
+    }
+}
+
 int main(void)
 {
     char raw[256];
@@ -121,9 +147,11 @@ int main(void)
 
     parse(clean);
 
+    prepare_optimization2();
+
     long long initial_max = 0;
     for (int i = 0; i < nletters; ++i) {
-        initial_max += 9LL * abs(weight[i]);
+        initial_max += 9LL * abs_weight[i];
     }
 
     if (solve(0, 0, 0, initial_max)) {
